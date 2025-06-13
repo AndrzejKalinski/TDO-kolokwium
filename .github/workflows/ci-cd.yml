@@ -81,7 +81,7 @@ jobs:
           name: docker-image
       - name: Load Docker image
         run: docker load -i my-app-image.tar
-      - name: Push to Docker Hub (simulate)
+      - name: Push to Docker Hub
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
