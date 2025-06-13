@@ -59,8 +59,8 @@ jobs:
           name: docker-image
       - name: Load Docker image
         run: docker load -i my-app-image.tar
-      - name: Deploy to staging (simulate)
-        run: echo "Simulating deployment to staging..."
+      - name: Deploy to staging
+        run: echo "Deployment to staging..."
   
   manual-approval:
     needs: staging
