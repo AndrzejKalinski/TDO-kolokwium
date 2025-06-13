@@ -69,7 +69,7 @@ jobs:
       name: production
     steps:
       - name: Wait for manual approval
-        run: echo "Manual approval required"
+        run: echo "Manual approval required."
 
   production:
     needs: manual-approval
