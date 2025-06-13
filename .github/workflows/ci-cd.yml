@@ -1,0 +1,109 @@
+name: Advanced CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm ci
+      - run: npm test
+
+  build:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm ci
+      - name: Build Docker image
+        run: docker build -t my-app-image .
+      - name: Save Docker image
+        run: |
+          docker save my-app-image -o my-app-image.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: my-app-image.tar
+
+  staging:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://example-staging-url.com
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+      - name: Load Docker image
+        run: docker load -i my-app-image.tar
+      - name: Deploy to staging (simulate)
+        run: echo "Simulating deployment to staging..."
+  
+  manual-approval:
+    needs: staging
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Wait for manual approval
+        run: echo "Manual approval required"
+
+  production:
+    needs: manual-approval
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+      - name: Load Docker image
+        run: docker load -i my-app-image.tar
+      - name: Push to Docker Hub (simulate)
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          echo "Simulating docker push to Docker Hub..."
+          # Example push:
+          # echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
+          # docker tag my-app-image $DOCKERHUB_USERNAME/my-app-image:latest
+          # docker push $DOCKERHUB_USERNAME/my-app-image:latest
+
+  notify:
+    needs: [lint, test, build, staging, manual-approval, production]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate final report
+        run: |
+          echo "Pipeline Summary Report" > raport.txt
+          echo "Commit: $GITHUB_SHA" >> raport.txt
+          echo "Branch: $GITHUB_REF_NAME" >> raport.txt
+          echo "Status: ${{ job.status }}" >> raport.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: final-report
+          path: raport.txt
